@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ambient Synth - Autoplay</title>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-overlay {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 255, 150, 0.2);
+            border-radius: 12px;
+            padding: 20px 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        body:hover .controls-overlay {
+            opacity: 1;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 120px;
+        }
+
+        label {
+            color: rgba(100, 255, 150, 0.7);
+            font-size: 0.75em;
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .value {
+            color: rgba(100, 255, 150, 1);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(100, 255, 150, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(100, 255, 150, 0.9);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: rgba(100, 255, 150, 1);
+            box-shadow: 0 0 15px rgba(100, 255, 150, 0.6);
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 0.9em;
+            font-weight: 500;
+            border: 1px solid rgba(100, 255, 150, 0.4);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(100, 255, 150, 0.1);
+            color: rgba(100, 255, 150, 0.9);
+        }
+
+        button:hover {
+            background: rgba(100, 255, 150, 0.2);
+            box-shadow: 0 0 20px rgba(100, 255, 150, 0.3);
+        }
+
+        button.active {
+            background: rgba(100, 255, 150, 0.3);
+            border-color: rgba(100, 255, 150, 0.8);
+            color: rgba(100, 255, 150, 1);
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(100, 255, 150, 0.4);
+            font-size: 0.9em;
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        body:hover .title {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="title">∿ AMBIENT SYNTH ∿</div>
+
+    <div class="controls-overlay">
+        <button id="playBtn">⏸ PAUSE</button>
+        
+        <div class="control-group">
+            <label>
+                REVERB
+                <span class="value" id="reverbValue">70%</span>
+            </label>
+            <input type="range" id="reverb" min="0" max="100" value="70" step="1">
+        </div>
+
+        <div class="control-group">
+            <label>
+                FILTER
+                <span class="value" id="filterValue">2000 Hz</span>
+            </label>
+            <input type="range" id="filter" min="200" max="5000" value="2000" step="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                TEMPO
+                <span class="value" id="tempoValue">72 BPM</span>
+            </label>
+            <input type="range" id="tempo" min="50" max="100" value="72" step="2">
+        </div>
+
+        <div class="control-group">
+            <label>
+                DENSITY
+                <span class="value" id="densityValue">Medium</span>
+            </label>
+            <input type="range" id="density" min="1" max="3" value="2" step="1">
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let animationId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Particles system - Circular orbit
+        class Particle {
+            constructor(radius, angle, color, size) {
+                this.radius = radius;
+                this.angle = angle;
+                this.color = color;
+                this.size = size;
+                this.alpha = 1;
+                this.life = 1;
+                this.speed = (Math.random() * 0.01 + 0.005) * (Math.random() > 0.5 ? 1 : -1);
+            }
+
+            update() {
+                this.angle += this.speed;
+                this.alpha -= 0.008;
+                this.life -= 0.008;
+                this.size *= 0.99;
+            }
+
+            draw(ctx, centerX, centerY) {
+                const x = centerX + Math.cos(this.angle) * this.radius;
+                const y = centerY + Math.sin(this.angle) * this.radius;
+                
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        const particles = [];
+
+        function createParticle(radius, color) {
+            const angle = Math.random() * Math.PI * 2;
+            particles.push(new Particle(radius, angle, color, Math.random() * 3 + 2));
+        }
+
+        // Global variables
+        let synths = [];
+        let analysers = [];
+        let parts = [];
+        let reverb = null;
+        let filter = null;
+        let isPlaying = false;
+        let isInitialized = false;
+
+        // Simple chord progression
+        const chordProgressions = [
+            [
+                ["C3", "E3", "G3", "B3"],
+                ["A2", "C3", "E3", "G3"],
+                ["F2", "A2", "C3", "E3"],
+                ["G2", "B2", "D3", "F3"]
+            ]
+        ];
+
+        let currentProgressionIndex = 0;
+        let densityLevel = 2;
+
+        // Initialize synth and effects
+        async function initialize() {
+            if (isInitialized) return;
+            
+            await Tone.start();
+            console.log('AudioContext started');
+            
+            reverb = new Tone.Reverb({
+                decay: 6,
+                wet: 0.7
+            }).toDestination();
+            
+            await reverb.generate();
+            
+            filter = new Tone.Filter({
+                frequency: 2000,
+                type: "lowpass",
+                rolloff: -12
+            }).connect(reverb);
+            
+            const synthConfigs = [
+                { oscillator: { type: "sine" }, color: "rgba(100, 255, 150, 0.8)", radius: 120 },
+                { oscillator: { type: "triangle" }, color: "rgba(150, 150, 150, 0.6)", radius: 200 },
+                { oscillator: { type: "sine" }, color: "rgba(100, 255, 150, 0.4)", radius: 280 }
+            ];
+            
+            for (let i = 0; i < 3; i++) {
+                const analyser = new Tone.Analyser('waveform', 256);
+                analysers.push(analyser);
+                
+                const synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: synthConfigs[i].oscillator,
+                    envelope: {
+                        attack: 2.0,
+                        decay: 0.5,
+                        sustain: 0.8,
+                        release: 4.0
+                    }
+                });
+                
+                synth.connect(analyser);
+                analyser.connect(filter);
+                
+                synth.color = synthConfigs[i].color;
+                synth.particleRadius = synthConfigs[i].radius;
+                synths.push(synth);
+            }
+            
+            createSequences();
+            
+            Tone.Transport.bpm.value = 72;
+            
+            isInitialized = true;
+            console.log('Ambient synth initialized');
+        }
+
+        function createSequences() {
+            parts.forEach(part => part.dispose());
+            parts = [];
+            
+            const progression = chordProgressions[currentProgressionIndex];
+            
+            const mainPart = new Tone.Part((time, chord) => {
+                synths[0].triggerAttackRelease(chord, "2m", time, 0.3);
+                Tone.Draw.schedule(() => {
+                    for (let i = 0; i < 4; i++) {
+                        createParticle(synths[0].particleRadius, synths[0].color);
+                    }
+                }, time);
+            }, progression.map((chord, i) => ({
+                time: i * 4,
+                chord: chord
+            })));
+            
+            mainPart.loop = true;
+            mainPart.loopEnd = "16m";
+            mainPart.start(0);
+            parts.push(mainPart);
+            
+            if (densityLevel >= 2) {
+                const arpNotes = progression.flat().map((note, i) => ({
+                    time: i * 0.5,
+                    note: note
+                }));
+                
+                const arpPart = new Tone.Part((time, obj) => {
+                    synths[1].triggerAttackRelease(obj.note, "4n", time, 0.2);
+                    Tone.Draw.schedule(() => {
+                        createParticle(synths[1].particleRadius, synths[1].color);
+                    }, time);
+                }, arpNotes);
+                
+                arpPart.loop = true;
+                arpPart.loopEnd = "8m";
+                arpPart.start(0);
+                parts.push(arpPart);
+            }
+            
+            if (densityLevel >= 3) {
+                const highNotes = [
+                    { time: 0, note: "C5" },
+                    { time: 8, note: "E5" },
+                    { time: 16, note: "G5" },
+                    { time: 24, note: "B5" }
+                ];
+                
+                const highPart = new Tone.Part((time, obj) => {
+                    synths[2].triggerAttackRelease(obj.note, "1m", time, 0.15);
+                    Tone.Draw.schedule(() => {
+                        createParticle(synths[2].particleRadius, synths[2].color);
+                    }, time);
+                }, highNotes);
+                
+                highPart.loop = true;
+                highPart.loopEnd = "16m";
+                highPart.start(0);
+                parts.push(highPart);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const time = Date.now() * 0.0001;
+            
+            const colors = [
+                'rgba(100, 255, 150, 0.8)',
+                'rgba(150, 150, 150, 0.6)',
+                'rgba(100, 255, 150, 0.4)'
+            ];
+            
+            const radii = [120, 200, 280];
+            const lineWidths = [2, 1.5, 1];
+            
+            analysers.forEach((analyser, index) => {
+                const values = analyser.getValue();
+                const radius = radii[index];
+                const lineWidth = lineWidths[index];
+                
+                ctx.strokeStyle = colors[index];
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();
+                
+                const angleStep = (Math.PI * 2) / values.length;
+                
+                for (let i = 0; i < values.length; i++) {
+                    const angle = i * angleStep + time * (index + 1) * 0.5;
+                    const amplitude = (values[i] + 1) / 2;
+                    const r = radius + amplitude * (40 + index * 10);
+                    
+                    const x = centerX + Math.cos(angle) * r;
+                    const y = centerY + Math.sin(angle) * r;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.stroke();
+                
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = colors[index];
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                particle.update();
+                particle.draw(ctx, centerX, centerY);
+                
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            animationId = requestAnimationFrame(draw);
+        }
+
+        // Autoplay on page load with catchy dial tone intro
+        window.addEventListener('load', async () => {
+            try {
+                await initialize();
+                
+                // Play catchy dial tone sequence (like phone dialing: pi-po-pa-po)
+                const dialTone = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: {
+                        attack: 0.01,
+                        decay: 0.05,
+                        sustain: 0.5,
+                        release: 0.1
+                    }
+                }).toDestination();
+                
+                // Phone dialing melody: pi-po-pa-po
+                const dialSequence = [
+                    { note: "E5", time: 0 },
+                    { note: "C5", time: 0.15 },
+                    { note: "G5", time: 0.30 },
+                    { note: "C5", time: 0.45 }
+                ];
+                
+                dialSequence.forEach(({ note, time }) => {
+                    setTimeout(() => {
+                        dialTone.triggerAttackRelease(note, "0.1");
+                    }, time * 1000);
+                });
+                
+                // Wait for dial tone to finish, then start ambient music
+                setTimeout(() => {
+                    Tone.Transport.position = 0;
+                    Tone.Transport.start();
+                    
+                    isPlaying = true;
+                    document.getElementById('playBtn').classList.add('active');
+                    
+                    draw();
+                    
+                    console.log('🎵 Autoplay started!');
+                }, 1200);
+                
+            } catch (error) {
+                console.error('Autoplay error:', error);
+            }
+        });
+
+        // UI Controls
+        const playBtn = document.getElementById('playBtn');
+
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                Tone.Transport.pause();
+                isPlaying = false;
+                playBtn.classList.remove('active');
+                playBtn.textContent = '▶ PLAY';
+                
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            } else {
+                Tone.Transport.start();
+                isPlaying = true;
+                playBtn.classList.add('active');
+                playBtn.textContent = '⏸ PAUSE';
+                draw();
+            }
+        });
+
+        // Parameter controls
+        document.getElementById('reverb').addEventListener('input', (e) => {
+            const value = parseInt(e.target.value) / 100;
+            if (reverb) {
+                reverb.wet.value = value;
+            }
+            document.getElementById('reverbValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('filter').addEventListener('input', (e) => {
+            if (filter) {
+                filter.frequency.value = e.target.value;
+            }
+            document.getElementById('filterValue').textContent = e.target.value + ' Hz';
+        });
+
+        document.getElementById('tempo').addEventListener('input', (e) => {
+            Tone.Transport.bpm.value = parseInt(e.target.value);
+            document.getElementById('tempoValue').textContent = e.target.value + ' BPM';
+        });
+
+        document.getElementById('density').addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            densityLevel = value;
+            
+            const labels = ['Sparse', 'Medium', 'Dense'];
+            document.getElementById('densityValue').textContent = labels[value - 1];
+            
+            if (isInitialized) {
+                createSequences();
+            }
+        });
+    </script>
+</body>
+</html>
