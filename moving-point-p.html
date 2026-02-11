@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動く点P - DOT P</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        #info {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 10;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        #info h1 {
+            font-size: 48px;
+            font-weight: 300;
+            margin-bottom: 10px;
+            letter-spacing: 8px;
+        }
+        
+        #info p {
+            font-size: 16px;
+            font-weight: 300;
+        }
+        
+        #point-label {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        #point-label.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div id="info">
+        <h1>DOT P</h1>
+        <p>動く点P - 常に知的好奇心をもって動き続ける</p>
+    </div>
+    
+    <div id="point-label">・点P</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const label = document.getElementById('point-label');
+        
+        // Canvas setup
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Point P properties
+        let time = 0;
+        const point = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 20,
+            trail: []
+        };
+        
+        // Mouse tracking
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            // Check if mouse is near point
+            const dx = mouseX - point.x;
+            const dy = mouseY - point.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 100) {
+                label.classList.add('show');
+                label.style.left = point.x + 30 + 'px';
+                label.style.top = point.y - 40 + 'px';
+            } else {
+                label.classList.remove('show');
+            }
+        });
+        
+        // Animation loop
+        function animate() {
+            // Semi-transparent black for trail effect
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update time
+            time += 0.01;
+            
+            // Calculate new position using mathematical functions
+            // Lissajous curve with varying parameters
+            const a = 3;
+            const b = 2;
+            const delta = time * 0.5;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radiusX = canvas.width * 0.35;
+            const radiusY = canvas.height * 0.35;
+            
+            const targetX = centerX + Math.sin(a * time + delta) * radiusX;
+            const targetY = centerY + Math.sin(b * time) * radiusY;
+            
+            // Smooth movement towards target
+            point.x += (targetX - point.x) * 0.05;
+            point.y += (targetY - point.y) * 0.05;
+            
+            // Add to trail
+            point.trail.push({ x: point.x, y: point.y, alpha: 1 });
+            
+            // Limit trail length
+            if (point.trail.length > 150) {
+                point.trail.shift();
+            }
+            
+            // Draw trail
+            point.trail.forEach((p, index) => {
+                const alpha = (index / point.trail.length) * 0.5;
+                const size = (index / point.trail.length) * point.size;
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, size / 4, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.fill();
+            });
+            
+            // Draw main point with glow
+            const gradient = ctx.createRadialGradient(
+                point.x, point.y, 0,
+                point.x, point.y, point.size * 2
+            );
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, point.size * 2, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Draw center point
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            
+            // Draw dot character
+            ctx.fillStyle = '#667eea';
+            ctx.font = 'bold 30px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('・', point.x, point.y);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
