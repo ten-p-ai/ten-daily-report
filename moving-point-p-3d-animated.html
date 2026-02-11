@@ -44,14 +44,14 @@
             font-size: 14px;
             font-weight: 300;
             color: #555;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
         }
     </style>
 </head>
 <body>
     <div id="logo">DOT P</div>
     <canvas id="canvas"></canvas>
-    <div id="subtitle">動く点P - 回転する立体</div>
+    <div id="subtitle">ポップインテリジェンスライフ</div>
     
     <script>
         const canvas = document.getElementById('canvas');
@@ -176,7 +176,7 @@
         // Point P
         let t = 0;
         const speed = 0.0015; // Half speed for smoother animation
-        const pointSize = 14;
+        const pointSize = 7;
         
         // Get position along path
         function getPositionOnPath(progress, vertices) {
@@ -267,20 +267,6 @@
             ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
             ctx.fillStyle = '#000';
             ctx.fill();
-            
-            // Draw "P" label
-            ctx.fillStyle = '#fff';
-            ctx.font = '22px Helvetica, Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('P', pos2d.x, pos2d.y);
-            
-            // Draw circle outline
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
-            ctx.stroke();
             
             requestAnimationFrame(animate);
         }
