@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動く点P - ミニマル</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #D8E3DA;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            font-weight: 300;
+            color: #222;
+            letter-spacing: 4px;
+        }
+        
+        #subtitle {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 300;
+            color: #555;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="logo">DOT P</div>
+    <canvas id="canvas"></canvas>
+    <div id="subtitle">動く点P</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Canvas setup
+        const canvasWidth = 800;
+        const canvasHeight = 600;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Rectangle path
+        const rect = {
+            x: 150,
+            y: 200,
+            width: 500,
+            height: 200
+        };
+        
+        // Point P
+        const point = {
+            x: rect.x,
+            y: rect.y,
+            size: 16,
+            speed: 0.005
+        };
+        
+        // Path parameters
+        let t = 0;
+        const totalPath = (rect.width + rect.height) * 2;
+        
+        // Calculate position on rectangle path
+        function getPositionOnPath(progress) {
+            const perimeter = totalPath;
+            const distance = progress * perimeter;
+            
+            // Top edge (left to right)
+            if (distance < rect.width) {
+                return {
+                    x: rect.x + distance,
+                    y: rect.y
+                };
+            }
+            // Right edge (top to bottom)
+            else if (distance < rect.width + rect.height) {
+                return {
+                    x: rect.x + rect.width,
+                    y: rect.y + (distance - rect.width)
+                };
+            }
+            // Bottom edge (right to left)
+            else if (distance < rect.width * 2 + rect.height) {
+                return {
+                    x: rect.x + rect.width - (distance - rect.width - rect.height),
+                    y: rect.y + rect.height
+                };
+            }
+            // Left edge (bottom to top)
+            else {
+                return {
+                    x: rect.x,
+                    y: rect.y + rect.height - (distance - rect.width * 2 - rect.height)
+                };
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            // Clear canvas with background color
+            ctx.fillStyle = '#D8E3DA';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw rectangle outline
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            
+            // Update position
+            t += point.speed;
+            if (t >= 1) t = 0;
+            
+            // Get current position on path
+            const pos = getPositionOnPath(t);
+            point.x = pos.x;
+            point.y = pos.y;
+            
+            // Draw point P
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+            ctx.fillStyle = '#000';
+            ctx.fill();
+            
+            // Draw "P" label next to point
+            ctx.fillStyle = '#000';
+            ctx.font = '24px Helvetica, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', point.x, point.y);
+            
+            // Draw small circle outline
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
