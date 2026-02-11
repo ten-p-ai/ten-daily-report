@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動く点P - 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #D8E3DA;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            font-weight: 300;
+            color: #222;
+            letter-spacing: 4px;
+        }
+        
+        #subtitle {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 300;
+            color: #555;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="logo">DOT P</div>
+    <canvas id="canvas"></canvas>
+    <div id="subtitle">動く点P - 立体</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Canvas setup
+        const canvasWidth = 800;
+        const canvasHeight = 600;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Isometric projection
+        function project(x, y, z) {
+            const scale = 1.5;
+            const angleX = Math.PI / 6; // 30 degrees
+            const angleY = Math.PI / 6; // 30 degrees
+            
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+            
+            const projX = (x * Math.cos(angleY) - z * Math.cos(angleY)) * scale + centerX;
+            const projY = (y - x * Math.sin(angleX) - z * Math.sin(angleX)) * scale + centerY;
+            
+            return { x: projX, y: projY };
+        }
+        
+        // Box dimensions
+        const boxSize = 150;
+        
+        // Define 8 vertices of the box
+        const vertices = [
+            { x: -boxSize, y: -boxSize, z: -boxSize }, // 0: back-bottom-left
+            { x:  boxSize, y: -boxSize, z: -boxSize }, // 1: back-bottom-right
+            { x:  boxSize, y:  boxSize, z: -boxSize }, // 2: back-top-right
+            { x: -boxSize, y:  boxSize, z: -boxSize }, // 3: back-top-left
+            { x: -boxSize, y: -boxSize, z:  boxSize }, // 4: front-bottom-left
+            { x:  boxSize, y: -boxSize, z:  boxSize }, // 5: front-bottom-right
+            { x:  boxSize, y:  boxSize, z:  boxSize }, // 6: front-top-right
+            { x: -boxSize, y:  boxSize, z:  boxSize }  // 7: front-top-left
+        ];
+        
+        // Define 12 edges (pairs of vertex indices)
+        const edges = [
+            // Back face
+            [0, 1], [1, 2], [2, 3], [3, 0],
+            // Front face
+            [4, 5], [5, 6], [6, 7], [7, 4],
+            // Connecting edges
+            [0, 4], [1, 5], [2, 6], [3, 7]
+        ];
+        
+        // Create path along edges
+        const path = [
+            // Start from vertex 0, go around bottom
+            { from: 0, to: 1 },
+            { from: 1, to: 5 },
+            { from: 5, to: 4 },
+            { from: 4, to: 0 },
+            // Go up
+            { from: 0, to: 3 },
+            { from: 3, to: 2 },
+            { from: 2, to: 1 },
+            // Go to top
+            { from: 2, to: 6 },
+            { from: 6, to: 7 },
+            { from: 7, to: 3 },
+            // Complete
+            { from: 7, to: 4 },
+            { from: 5, to: 6 }
+        ];
+        
+        // Point P
+        let t = 0;
+        const speed = 0.003;
+        const pointSize = 14;
+        
+        // Get position along path
+        function getPositionOnPath(progress) {
+            const totalSegments = path.length;
+            const segmentIndex = Math.floor(progress * totalSegments);
+            const segmentProgress = (progress * totalSegments) % 1;
+            
+            if (segmentIndex >= totalSegments) {
+                const lastSegment = path[totalSegments - 1];
+                return vertices[lastSegment.to];
+            }
+            
+            const segment = path[segmentIndex];
+            const from = vertices[segment.from];
+            const to = vertices[segment.to];
+            
+            return {
+                x: from.x + (to.x - from.x) * segmentProgress,
+                y: from.y + (to.y - from.y) * segmentProgress,
+                z: from.z + (to.z - from.z) * segmentProgress
+            };
+        }
+        
+        // Animation loop
+        function animate() {
+            // Clear canvas
+            ctx.fillStyle = '#D8E3DA';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw box edges
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            
+            edges.forEach(edge => {
+                const from = project(vertices[edge[0]].x, vertices[edge[0]].y, vertices[edge[0]].z);
+                const to = project(vertices[edge[1]].x, vertices[edge[1]].y, vertices[edge[1]].z);
+                
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.stroke();
+            });
+            
+            // Update position
+            t += speed;
+            if (t >= 1) t = 0;
+            
+            // Get current 3D position
+            const pos3d = getPositionOnPath(t);
+            const pos2d = project(pos3d.x, pos3d.y, pos3d.z);
+            
+            // Draw point P
+            ctx.beginPath();
+            ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
+            ctx.fillStyle = '#000';
+            ctx.fill();
+            
+            // Draw "P" label
+            ctx.fillStyle = '#000';
+            ctx.font = '22px Helvetica, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', pos2d.x, pos2d.y);
+            
+            // Draw circle outline
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
