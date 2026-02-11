@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動く点P - 3D回転</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #D8E3DA;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            font-weight: 300;
+            color: #222;
+            letter-spacing: 4px;
+        }
+        
+        #subtitle {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 300;
+            color: #555;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="logo">DOT P</div>
+    <canvas id="canvas"></canvas>
+    <div id="subtitle">動く点P - 回転する立体</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Canvas setup
+        const canvasWidth = 800;
+        const canvasHeight = 600;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Rotation angles
+        let rotationX = 0;
+        let rotationY = 0;
+        let rotationZ = 0;
+        
+        // Scale factor
+        let scaleTime = 0;
+        
+        // Rotate point in 3D space
+        function rotateX(point, angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return {
+                x: point.x,
+                y: point.y * cos - point.z * sin,
+                z: point.y * sin + point.z * cos
+            };
+        }
+        
+        function rotateY(point, angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return {
+                x: point.x * cos + point.z * sin,
+                y: point.y,
+                z: -point.x * sin + point.z * cos
+            };
+        }
+        
+        function rotateZ(point, angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return {
+                x: point.x * cos - point.y * sin,
+                y: point.x * sin + point.y * cos,
+                z: point.z
+            };
+        }
+        
+        // Apply all rotations
+        function rotate3D(point, rx, ry, rz) {
+            let p = rotateX(point, rx);
+            p = rotateY(p, ry);
+            p = rotateZ(p, rz);
+            return p;
+        }
+        
+        // Perspective projection
+        function project(x, y, z) {
+            const scale = 1.5;
+            const perspective = 800;
+            const distance = 400;
+            
+            const centerX = canvasWidth / 2;
+            const centerY = canvasHeight / 2;
+            
+            const factor = perspective / (perspective + z + distance);
+            const projX = x * factor * scale + centerX;
+            const projY = y * factor * scale + centerY;
+            
+            return { x: projX, y: projY, depth: z };
+        }
+        
+        // Box dimensions
+        const baseBoxSize = 150;
+        
+        // Create base vertices
+        function createVertices(boxSizeX, boxSizeY, boxSizeZ) {
+            return [
+                { x: -boxSizeX, y: -boxSizeY, z: -boxSizeZ }, // 0: back-bottom-left
+                { x:  boxSizeX, y: -boxSizeY, z: -boxSizeZ }, // 1: back-bottom-right
+                { x:  boxSizeX, y:  boxSizeY, z: -boxSizeZ }, // 2: back-top-right
+                { x: -boxSizeX, y:  boxSizeY, z: -boxSizeZ }, // 3: back-top-left
+                { x: -boxSizeX, y: -boxSizeY, z:  boxSizeZ }, // 4: front-bottom-left
+                { x:  boxSizeX, y: -boxSizeY, z:  boxSizeZ }, // 5: front-bottom-right
+                { x:  boxSizeX, y:  boxSizeY, z:  boxSizeZ }, // 6: front-top-right
+                { x: -boxSizeX, y:  boxSizeY, z:  boxSizeZ }  // 7: front-top-left
+            ];
+        }
+        
+        // Define 12 edges (pairs of vertex indices)
+        const edges = [
+            // Back face
+            [0, 1], [1, 2], [2, 3], [3, 0],
+            // Front face
+            [4, 5], [5, 6], [6, 7], [7, 4],
+            // Connecting edges
+            [0, 4], [1, 5], [2, 6], [3, 7]
+        ];
+        
+        // Create path along edges
+        const path = [
+            // Start from vertex 0, go around bottom
+            { from: 0, to: 1 },
+            { from: 1, to: 5 },
+            { from: 5, to: 4 },
+            { from: 4, to: 0 },
+            // Go up
+            { from: 0, to: 3 },
+            { from: 3, to: 2 },
+            { from: 2, to: 1 },
+            // Go to top
+            { from: 2, to: 6 },
+            { from: 6, to: 7 },
+            { from: 7, to: 3 },
+            // Complete
+            { from: 7, to: 4 },
+            { from: 5, to: 6 }
+        ];
+        
+        // Point P
+        let t = 0;
+        const speed = 0.0015; // Half speed for smoother animation
+        const pointSize = 14;
+        
+        // Get position along path
+        function getPositionOnPath(progress, vertices) {
+            const totalSegments = path.length;
+            const segmentIndex = Math.floor(progress * totalSegments);
+            const segmentProgress = (progress * totalSegments) % 1;
+            
+            if (segmentIndex >= totalSegments) {
+                const lastSegment = path[totalSegments - 1];
+                return vertices[lastSegment.to];
+            }
+            
+            const segment = path[segmentIndex];
+            const from = vertices[segment.from];
+            const to = vertices[segment.to];
+            
+            return {
+                x: from.x + (to.x - from.x) * segmentProgress,
+                y: from.y + (to.y - from.y) * segmentProgress,
+                z: from.z + (to.z - from.z) * segmentProgress
+            };
+        }
+        
+        // Animation loop
+        function animate() {
+            // Clear canvas
+            ctx.fillStyle = '#D8E3DA';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Update rotation (slow and smooth)
+            rotationY += 0.003;
+            rotationX = Math.sin(Date.now() * 0.0003) * 0.3;
+            rotationZ = Math.cos(Date.now() * 0.0002) * 0.2;
+            
+            // Update scale (breathing effect)
+            scaleTime += 0.01;
+            const scaleFactorX = 1 + Math.sin(scaleTime * 0.5) * 0.3;
+            const scaleFactorY = 1 + Math.cos(scaleTime * 0.7) * 0.2;
+            const scaleFactorZ = 1 + Math.sin(scaleTime * 0.6) * 0.25;
+            
+            // Create vertices with current scale
+            const vertices = createVertices(
+                baseBoxSize * scaleFactorX,
+                baseBoxSize * scaleFactorY,
+                baseBoxSize * scaleFactorZ
+            );
+            
+            // Apply rotation to all vertices
+            const rotatedVertices = vertices.map(v => rotate3D(v, rotationX, rotationY, rotationZ));
+            
+            // Project vertices to 2D
+            const projectedVertices = rotatedVertices.map(v => project(v.x, v.y, v.z));
+            
+            // Sort edges by average depth for proper rendering
+            const edgesWithDepth = edges.map(edge => {
+                const avgDepth = (projectedVertices[edge[0]].depth + projectedVertices[edge[1]].depth) / 2;
+                return { edge, depth: avgDepth };
+            });
+            edgesWithDepth.sort((a, b) => a.depth - b.depth);
+            
+            // Draw box edges
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            
+            edgesWithDepth.forEach(({ edge }) => {
+                const from = projectedVertices[edge[0]];
+                const to = projectedVertices[edge[1]];
+                
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.stroke();
+            });
+            
+            // Update position
+            t += speed;
+            if (t >= 1) t = 0;
+            
+            // Get current 3D position (before rotation)
+            const pos3d = getPositionOnPath(t, vertices);
+            
+            // Apply rotation to point P
+            const rotatedPos = rotate3D(pos3d, rotationX, rotationY, rotationZ);
+            const pos2d = project(rotatedPos.x, rotatedPos.y, rotatedPos.z);
+            
+            // Draw point P
+            ctx.beginPath();
+            ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
+            ctx.fillStyle = '#000';
+            ctx.fill();
+            
+            // Draw "P" label
+            ctx.fillStyle = '#fff';
+            ctx.font = '22px Helvetica, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', pos2d.x, pos2d.y);
+            
+            // Draw circle outline
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(pos2d.x, pos2d.y, pointSize, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
