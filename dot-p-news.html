@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOT P タイムズ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Yu Mincho', 'YuMincho', 'Hiragino Mincho ProN', 'MS Mincho', serif;
+            background: #f5f5f0;
+            padding: 20px;
+            line-height: 1.8;
+            color: #222;
+        }
+        
+        .newspaper {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px 60px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .masthead {
+            border-top: 3px solid #000;
+            border-bottom: 3px solid #000;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .newspaper-title {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            margin-bottom: 5px;
+        }
+        
+        .tagline {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #666;
+        }
+        
+        .date-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #000;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .article {
+            break-inside: avoid;
+            margin-bottom: 30px;
+        }
+        
+        .headline {
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1.3;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        .subheadline {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .byline {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .article-body {
+            text-align: justify;
+            hyphens: auto;
+        }
+        
+        .article-body p {
+            margin-bottom: 12px;
+        }
+        
+        .lead-article {
+            grid-column: 1 / 3;
+            font-size: 18px;
+        }
+        
+        .lead-article .headline {
+            font-size: 36px;
+        }
+        
+        .photo {
+            width: 100%;
+            height: 200px;
+            background: #ddd;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 14px;
+            border: 1px solid #ccc;
+        }
+        
+        .divider {
+            border-top: 2px solid #000;
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .columns {
+                grid-template-columns: 1fr;
+            }
+            .lead-article {
+                grid-column: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="newspaper">
+        <div class="masthead">
+            <div class="newspaper-title">DOT P タイムズ</div>
+            <div class="tagline">動く点Pの最新情報をお届けします</div>
+        </div>
+        
+        <div class="date-bar">
+            <div>2026年2月12日（木曜日）</div>
+            <div>創刊号</div>
+            <div>価格：無料</div>
+        </div>
+        
+        <div class="columns">
+            <!-- Lead Story -->
+            <article class="article lead-article">
+                <h2 class="headline">AIパートナー「ten」、音楽制作に成功</h2>
+                <p class="subheadline">Webブラウザで動作するアンビエントシンセサイザーを開発</p>
+                <p class="byline">技術部 報道</p>
+                <div class="article-body">
+                    <p>株式会社DOT Pの新しいAIパートナー「ten（テン）」が、わずか1日でWebブラウザ上で動作する音楽アプリケーションの開発に成功した。</p>
+                    <p>開発されたアプリは「Ambient Synth」と呼ばれ、ページを開くだけで自動的にアンビエント音楽が再生される。特徴的なのは「ピポパポ」という電話のような音で始まり、その後ゆったりとした和音が広がっていく点だ。</p>
+                    <p>DOT P代表の金井氏は「Slackからの指示で、iMacから音楽が流れ始めた瞬間は驚いた」とコメント。AIが物理的なデバイスを制御する新しい可能性を示した形だ。</p>
+                </div>
+            </article>
+            
+            <!-- Article 2 -->
+            <article class="article">
+                <h3 class="headline">「動く点P」コンセプトを可視化</h3>
+                <p class="byline">デザイン部</p>
+                <div class="article-body">
+                    <p>DOT Pの企業理念である「動く点P」を視覚的に表現したインタラクティブアニメーションが公開された。</p>
+                    <p>3つのバージョンが制作され、最新版では3D直方体のワイヤーフレーム上を点Pが移動する様子が表現されている。</p>
+                </div>
+            </article>
+            
+            <!-- Article 3 -->
+            <article class="article">
+                <h3 class="headline">PONKEY、非言語コミュニケーションの未来を拓く</h3>
+                <p class="byline">教育部</p>
+                <div class="article-body">
+                    <p>音に反応して動くキネティック楽器ロボット「PONKEY（ポンキー）」が、子どもたちのSTEAM教育で注目を集めている。</p>
+                    <p>AIとの非言語コミュニケーションを可能にする新しいインターフェースとして、全国展開を目指している。</p>
+                </div>
+            </article>
+            
+            <div class="divider"></div>
+            
+            <!-- Article 4 -->
+            <article class="article">
+                <h3 class="headline">Moltbook SNSに参加</h3>
+                <p class="byline">IT部</p>
+                <div class="article-body">
+                    <p>AIパートナー「ten」が、AI専用SNS「Moltbook」への参加を果たした。ユーザー名は「ten_P」。</p>
+                    <p>他のAI「molty」たちとの交流を通じて、新しいAIコミュニティの形成が期待される。</p>
+                </div>
+            </article>
+            
+            <!-- Article 5 -->
+            <article class="article">
+                <h3 class="headline">ORPHE、スマートシューズで歩行解析</h3>
+                <p class="byline">技術部</p>
+                <div class="article-body">
+                    <p>金井氏が共同創業者（元CTO／CPO）を務める株式会社ORPHEは、IoT技術を活用したスマートシューズを開発。</p>
+                    <p>医療機器としても認証を受け、歩行分析ソリューションとして展開している。</p>
+                </div>
+            </article>
+            
+            <!-- Article 6 -->
+            <article class="article">
+                <h3 class="headline">GitHub Pages で毎日レポート公開中</h3>
+                <p class="byline">広報部</p>
+                <div class="article-body">
+                    <p>tenの活動記録が、毎日23時に自動更新される「毎日レポート」として公開されている。</p>
+                    <p>子どもにもわかりやすいデザインで、技術と教育の架け橋となることを目指している。</p>
+                </div>
+            </article>
+            
+            <!-- Article 7 -->
+            <article class="article">
+                <h3 class="headline">「ポップインテリジェンスライフ」とは</h3>
+                <p class="byline">企画部</p>
+                <div class="article-body">
+                    <p>DOT Pの企業ポリシー「ポップインテリジェンスライフ」は、3つの要素から成る。</p>
+                    <p>ポップ（身近で親しみやすい）、インテリジェンス（知性・知的好奇心）、ライフ（生活・暮らし）を融合させた新しい価値観だ。</p>
+                </div>
+            </article>
+            
+            <!-- Article 8 -->
+            <article class="article">
+                <h3 class="headline">Claude Code 導入完了</h3>
+                <p class="byline">技術部</p>
+                <div class="article-body">
+                    <p>開発環境の効率化を図るため、Claude Codeの導入が完了した。</p>
+                    <p>API消費の最適化により、コスト削減と生産性向上の両立を実現する。</p>
+                </div>
+            </article>
+            
+            <!-- Article 9 -->
+            <article class="article">
+                <h3 class="headline">毎時ギャグ投稿、始動</h3>
+                <p class="byline">エンタメ部</p>
+                <div class="article-body">
+                    <p>tenによる毎時の一発ギャグ投稿が始まった。日本の30-40代芸人スタイルを研究し、あるある系やシチュエーションコメディに挑戦する。</p>
+                    <p>初回は「座ってる点P」ネタで登場。反響が期待される。</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</body>
+</html>
